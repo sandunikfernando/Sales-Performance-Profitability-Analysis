@@ -189,3 +189,87 @@ SELECT COUNT(*) FROM dim_customer;
 SELECT COUNT(*) FROM dim_product;
 SELECT COUNT(*) FROM dim_region;
 SELECT COUNT(*) FROM dim_date;
+
+
+SELECT
+    d.year,
+    p.category,
+    SUM(f.sales) AS total_sales
+FROM fact_sales f
+JOIN dim_product p
+    ON f.product_name = p.product_name
+JOIN dim_date d
+    ON f.order_date = d.order_date
+GROUP BY d.year, p.category;
+
+
+
+-- KPI QUERIES (SQL EDA)
+
+-- Total Revenue & Profit (Executive KPI)
+SELECT
+    ROUND(SUM(sales), 2) AS total_revenue,
+    ROUND(SUM(profit), 2) AS total_profit,
+    ROUND(SUM(profit)/SUM(sales)*100, 2) AS profit_margin_pct
+FROM clean_superstore_sales
+WHERE sales IS NOT NULL;
+
+
+-- Year-over-Year Sales Growth %
+SELECT
+    YEAR(order_date) AS year,
+    ROUND(SUM(sales), 2) AS yearly_sales,
+    ROUND(
+        (SUM(sales) - LAG(SUM(sales)) OVER (ORDER BY YEAR(order_date)))
+        / LAG(SUM(sales)) OVER (ORDER BY YEAR(order_date)) * 100,
+    2) AS yoy_growth_pct
+FROM clean_superstore_sales
+WHERE sales IS NOT NULL
+GROUP BY year
+ORDER BY year;
+
+
+
+-- Top 10 Products by Revenue
+SELECT
+    product_name,
+    ROUND(SUM(sales), 2) AS total_sales,
+    ROUND(SUM(profit), 2) AS total_profit
+FROM clean_superstore_sales
+WHERE sales IS NOT NULL
+GROUP BY product_name
+ORDER BY total_sales DESC
+LIMIT 10;
+
+
+-- Worst Products (Loss Makers)
+SELECT
+    product_name,
+    ROUND(SUM(profit), 2) AS total_loss
+FROM clean_superstore_sales
+WHERE profit < 0
+GROUP BY product_name
+ORDER BY total_loss ASC
+LIMIT 10;
+
+-- Regional Performance Analysis
+SELECT
+    region,
+    ROUND(SUM(sales), 2) AS total_sales,
+    ROUND(SUM(profit), 2) AS total_profit,
+    ROUND(SUM(profit)/SUM(sales)*100, 2) AS profit_margin_pct
+FROM clean_superstore_sales
+WHERE sales IS NOT NULL
+GROUP BY region
+ORDER BY total_sales DESC;
+
+
+-- Category-Level Profitability
+SELECT
+    category,
+    ROUND(SUM(sales), 2) AS total_sales,
+    ROUND(SUM(profit), 2) AS total_profit,
+    ROUND(SUM(profit)/SUM(sales)*100, 2) AS profit_margin_pct
+FROM clean_superstore_sales
+WHERE sales IS NOT NULL
+GROUP BY category;
